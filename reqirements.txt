@@ -1,0 +1,9 @@
+openai 
+sentence-transformers 
+faiss-cpu 
+hf_xet 
+pdfplumber
+python-docx
+pytest
+PyPDF2
+pypdf
