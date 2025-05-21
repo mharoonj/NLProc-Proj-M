@@ -32,19 +32,30 @@ class Generator:
         self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
         
     def build_prompt(self, context: str, question: str) -> str:
-        """
-        Build the prompt by combining context and question.
-        
-        Args:
-            context (str): The context text
-            question (str): The question to answer
-            
-        Returns:
-            str: Formatted prompt
-        """
-        prompt = f"Context: {context}\nQuestion: {question}\nAnswer:"
-        return prompt
+        """Build a clearer and more structured prompt."""
+        # Remove score tags to avoid confusion
+        cleaned_context = "\n".join(
+        line.split("] ")[1] if "] " in line else line 
+        for line in context.split("\n")
+    )
     
+        prompt = f"""
+        **Task:** Answer the question using ONLY the provided context.  
+        **Rules:**  
+        - **MUST** include all key details.  
+        - If the answer is not in the context, say "cannot find."  
+        - Organize information clearly.  
+
+        **Context:**  
+        {cleaned_context}  
+
+        **Question:**  
+        {question}  
+
+        **Answer (detailed, in complete sentences):**  
+        """
+        return prompt.strip()
+
     def generate_answer(self, question: str, context: Optional[str] = None, k: int = 3) -> str:
         """
         Generate an answer for the given question, optionally using retrieved context.
@@ -60,9 +71,17 @@ class Generator:
         # If no direct context provided and retriever is available, use retriever
         if context is None and self.retriever is not None:
             retrieved_docs = self.retriever.query(question, k=k)
-            context = "\n".join([doc['text'] for doc in retrieved_docs])
+            if not retrieved_docs:
+                return "I cannot find this information in the provided context."
+            
+            # Combine retrieved chunks with their scores
+            context_parts = []
+            for doc in retrieved_docs:
+                context_parts.append(doc['text'])  # Remove score from context
+            context = "\n\n".join(context_parts)
         
         # If still no context, use empty string
+        # print("context : ", context)
         if context is None:
             context = ""
             
@@ -70,20 +89,26 @@ class Generator:
         prompt = self.build_prompt(context, question)
         
         # Tokenize the input
-        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
+        inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024)
         
         # Generate the answer
         outputs = self.model.generate(
             inputs["input_ids"],
-            max_length=128,
-            num_beams=4,
-            length_penalty=2.0,
-            early_stopping=True
-        )
+              max_length=1024,  # Increased length
+                num_beams=4,
+                length_penalty=1.5,  # Slightly lower penalty
+                early_stopping=True,
+                temperature=0.7,  # Higher temperature for more diversity
+                do_sample=True,   # Enable sampling
+                top_p=0.95,       # Broader nucleus sampling
+                top_k=50         # Larger top-k
+                
+                )
         
         # Decode and return the answer
         answer = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return answer
+        # print("context answer : ", answer.strip())
+        return answer.strip()
 
 def main():
     """Example usage of the Generator with Retriever"""
@@ -97,11 +122,20 @@ def main():
     # Initialize generator with retriever
     generator = Generator(retriever=retriever)
     
-    # Example question
-    question = "What are the key points about Imran Khan?"
-    answer = generator.generate_answer(question)
-    print(f"Question: {question}")
-    print(f"Answer: {answer}")
+    # Example questions
+    questions = [
+        "who is Imran Khan?",
+        # "When did Imran Khan start his cricket career?",
+        # "What are Imran Khan's major achievements?",
+        # "What is Imran Khan's educational background?",
+        # "In which country did Imran Khan became prime minister and for what time period?",
+        # "What are Imran Khan's views on foreign policy?"
+    ]
+    
+    for question in questions:
+        print(f"\nQuestion: {question}")
+        answer = generator.generate_answer(question)
+        print(f"Answer: {answer}")
 
 if __name__ == "__main__":
     main()

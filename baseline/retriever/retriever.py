@@ -8,7 +8,7 @@ import PyPDF2  # For PDF handling
 import re
 
 class Retriever:
-    def __init__(self, model_name: str = 'all-MiniLM-L6-v2', chunk_size: int = 512, chunk_overlap: int = 50):
+    def __init__(self, model_name: str = 'all-MiniLM-L6-v2', chunk_size: int = 512, chunk_overlap: int = 100):
         """
         Initialize the Retriever with a sentence transformer model and chunking parameters.
         
@@ -21,7 +21,10 @@ class Retriever:
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap
+            chunk_overlap=chunk_overlap,
+            separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],  # Prioritize sentence boundaries
+            length_function=len,
+            is_separator_regex=False
         )
         self.index = None
         self.documents = []
@@ -92,12 +95,16 @@ class Retriever:
         for idx, score in zip(indices[0], distances[0]):
             if idx >= 0:  # FAISS may return -1 for invalid indices
                 chunk = self.chunks[idx]
+                # Convert distance to similarity score (lower distance = higher similarity)
+                similarity_score = 1.0 / (1.0 + float(score))
                 results.append({
                     'text': chunk['text'],
                     'metadata': chunk['metadata'],
-                    'score': float(score)
+                    'score': similarity_score
                 })
         
+        # Sort by similarity score (highest first)
+        results.sort(key=lambda x: x['score'], reverse=True)
         return results
     
     def save_index(self, filepath: str):
@@ -139,7 +146,10 @@ class Retriever:
         """Basic text preprocessing"""
         # Remove excessive whitespace
         text = re.sub(r'\s+', ' ', text).strip()
-        # TODO: Add your custom preprocessing here
+        # Remove special characters but keep important punctuation
+        text = re.sub(r'[^\w\s.,!?-]', ' ', text)
+        # Ensure proper spacing around punctuation
+        text = re.sub(r'\s+([.,!?])', r'\1', text)
         return text
 
     def add_file(self, file_path: Union[str, Path], metadata: dict = None):

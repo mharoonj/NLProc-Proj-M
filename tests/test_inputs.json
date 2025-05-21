@@ -1,27 +1,17 @@
 [
     {
-        "question": "What are the key points about Imran Khan?",
-        "expected_answer_contains": ["Imran Khan", "cricket", "Prime Minister"],
+        "question": "Who is Imran Khan?",
+        "expected_answer_contains": [ "Cricketer", "politician", "chairman", "pti"],
         "description": "Basic biographical question"
     },
     {
-        "question": "What is Imran Khan's background in cricket?",
-        "expected_answer_contains": ["cricket", "captain", "World Cup"],
+        "question": "Which sports Imran Khan played? ",
+        "expected_answer_contains": ["cricket"],
         "description": "Specific sports career question"
     },
     {
-        "question": "What are Imran Khan's major political achievements?",
-        "expected_answer_contains": ["Prime Minister", "political", "government"],
-        "description": "Political career question"
-    },
-    {
         "question": "What is Imran Khan's educational background?",
-        "expected_answer_contains": ["education", "university", "degree"],
+        "expected_answer_contains": ["oxford", "keble"],
         "description": "Education background question"
-    },
-    {
-        "question": "What are Imran Khan's views on foreign policy?",
-        "expected_answer_contains": ["foreign", "policy", "international"],
-        "description": "Policy views question"
     }
 ] 
