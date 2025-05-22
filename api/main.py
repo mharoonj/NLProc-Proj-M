@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 import sys
 import json
+import os
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -158,6 +159,58 @@ async def root():
             "/": "GET - This information page"
         }
     }
+
+@app.get("/api/logs")
+async def get_logs():
+    """
+    Get all log data from rag_logs files.
+    
+    Returns:
+        List of log entries containing questions, retrieved chunks, and generated answers
+    """
+    try:
+        log_data = []
+        logs_dir = project_root / "logs"
+        
+        # Check if logs directory exists
+        if not logs_dir.exists():
+            print(f"Logs directory not found at: {logs_dir}")
+            return []
+            
+        # Read all rag_logs files
+        log_files = [f for f in os.listdir(logs_dir) if f.startswith("rag_logs_") and f.endswith(".jsonl")]
+        
+        if not log_files:
+            print(f"No rag_logs files found in: {logs_dir}")
+            return []
+            
+        for filename in log_files:
+            try:
+                file_path = logs_dir / filename
+                print(f"Reading log file: {file_path}")
+                
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    for line_num, line in enumerate(f, 1):
+                        if line.strip():
+                            try:
+                                log_entry = json.loads(line)
+                                log_data.append(log_entry)
+                            except json.JSONDecodeError as e:
+                                print(f"Error parsing JSON in {filename} at line {line_num}: {e}")
+                                continue
+            except Exception as e:
+                print(f"Error reading file {filename}: {e}")
+                continue
+        
+        print(f"Successfully loaded {len(log_data)} log entries")
+        return log_data
+        
+    except Exception as e:
+        print(f"Error in get_logs: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading log files: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn
