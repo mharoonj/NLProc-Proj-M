@@ -163,7 +163,7 @@ async def root():
 @app.get("/api/logs")
 async def get_logs():
     """
-    Get all log data from rag_logs files.
+    Get all test log data from rag_logs files.
     
     Returns:
         List of log entries containing questions, retrieved chunks, and generated answers
@@ -177,17 +177,17 @@ async def get_logs():
             print(f"Logs directory not found at: {logs_dir}")
             return []
             
-        # Read all rag_logs files
-        log_files = [f for f in os.listdir(logs_dir) if f.startswith("rag_logs_") and f.endswith(".jsonl")]
+        # Read only test log files
+        log_files = [f for f in os.listdir(logs_dir) if f.startswith("test_rag_logs_") and f.endswith(".jsonl")]
         
         if not log_files:
-            print(f"No rag_logs files found in: {logs_dir}")
+            print(f"No test log files found in: {logs_dir}")
             return []
             
         for filename in log_files:
             try:
                 file_path = logs_dir / filename
-                print(f"Reading log file: {file_path}")
+                print(f"Reading test log file: {file_path}")
                 
                 with open(file_path, 'r', encoding='utf-8') as f:
                     for line_num, line in enumerate(f, 1):
@@ -202,14 +202,14 @@ async def get_logs():
                 print(f"Error reading file {filename}: {e}")
                 continue
         
-        print(f"Successfully loaded {len(log_data)} log entries")
+        print(f"Successfully loaded {len(log_data)} test log entries")
         return log_data
         
     except Exception as e:
         print(f"Error in get_logs: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error reading log files: {str(e)}"
+            detail=f"Error reading test log files: {str(e)}"
         )
 
 if __name__ == "__main__":

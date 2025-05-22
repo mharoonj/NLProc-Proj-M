@@ -13,14 +13,16 @@ function TestingEvaluation({ isActive }) {
     successfulRetrievals: 0,
     averageScore: 0,
     responseTime: 0,
-    accuracy: 0
+    accuracy: 0,
+    matchedAnswers: 0,
+    unmatchedAnswers: 0
   });
 
   useEffect(() => {
     if (isActive) {
       fetchLogData();
     }
-  }, [isActive]); // Re-fetch when tab becomes active
+  }, [isActive]);
 
   const fetchLogData = async () => {
     try {
@@ -39,11 +41,8 @@ function TestingEvaluation({ isActive }) {
         throw new Error('Invalid data format received from server');
       }
       
-      // Deduplicate data based on group_id
-      const uniqueData = Array.from(new Map(data.map(item => [item.group_id, item])).values());
-      
-      setLogData(uniqueData);
-      calculateMetrics(uniqueData);
+      setLogData(data);
+      calculateMetrics(data);
     } catch (error) {
       console.error('Error fetching log data:', error);
       setError(error.message);
@@ -63,18 +62,22 @@ function TestingEvaluation({ isActive }) {
       return acc + (scores.length > 0 ? scores[0] : 0);
     }, 0) / totalQueries;
 
-    // Calculate accuracy based on whether the answer is meaningful
-    const accurateAnswers = data.filter(item => {
+    // Calculate matched and unmatched answers
+    const matchedAnswers = data.filter(item => {
       const answer = item.generated_answer?.toLowerCase() || '';
       return answer !== 'cannot find' && answer !== 'can not find' && answer.trim() !== '';
     }).length;
+
+    const unmatchedAnswers = totalQueries - matchedAnswers;
 
     setMetrics({
       totalQueries,
       successfulRetrievals,
       averageScore: averageScore.toFixed(4),
-      responseTime: '0.5s', // This should be calculated from actual timing data
-      accuracy: ((accurateAnswers / totalQueries) * 100).toFixed(1)
+      responseTime: '0.5s',
+      accuracy: ((matchedAnswers / totalQueries) * 100).toFixed(1),
+      matchedAnswers,
+      unmatchedAnswers
     });
   };
 
@@ -163,29 +166,38 @@ function TestingEvaluation({ isActive }) {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '50px' }}>
           <Spin size="large" />
-          <div style={{ marginTop: '16px' }}>Loading log data...</div>
+          <div style={{ marginTop: '16px' }}>Loading test results...</div>
         </div>
       ) : (
         <>
           <Row gutter={16} style={{ marginBottom: '24px' }}>
-            <Col span={6}>
+            <Col span={4}>
               <Card>
                 <Statistic
-                  title="Total Queries"
+                  title="Total Test Queries"
                   value={metrics.totalQueries}
                 />
               </Card>
             </Col>
-            <Col span={6}>
+            <Col span={4}>
               <Card>
                 <Statistic
-                  title="Successful Retrievals"
-                  value={metrics.successfulRetrievals}
-                  suffix={`/ ${metrics.totalQueries}`}
+                  title="Matched Answers"
+                  value={metrics.matchedAnswers}
+                  valueStyle={{ color: '#3f8600' }}
                 />
               </Card>
             </Col>
-            <Col span={6}>
+            <Col span={4}>
+              <Card>
+                <Statistic
+                  title="Unmatched Answers"
+                  value={metrics.unmatchedAnswers}
+                  valueStyle={{ color: '#cf1322' }}
+                />
+              </Card>
+            </Col>
+            <Col span={4}>
               <Card>
                 <Statistic
                   title="Average Score"
@@ -194,7 +206,7 @@ function TestingEvaluation({ isActive }) {
                 />
               </Card>
             </Col>
-            <Col span={6}>
+            <Col span={4}>
               <Card>
                 <Statistic
                   title="Answer Accuracy"
@@ -203,13 +215,22 @@ function TestingEvaluation({ isActive }) {
                 />
               </Card>
             </Col>
+            <Col span={4}>
+              <Card>
+                <Statistic
+                  title="Successful Retrievals"
+                  value={metrics.successfulRetrievals}
+                  suffix={`/ ${metrics.totalQueries}`}
+                />
+              </Card>
+            </Col>
           </Row>
 
-          <Title level={4}>Detailed Results</Title>
+          <Title level={4}>Test Results</Title>
           <Table
             dataSource={logData}
             columns={columns}
-            rowKey="group_id"
+            rowKey="timestamp"
             pagination={{ pageSize: 5 }}
             scroll={{ x: true }}
           />
@@ -225,8 +246,10 @@ function TestingEvaluation({ isActive }) {
               {metrics.accuracy > 80 ? ' The high accuracy indicates reliable responses.' : ' There is room for improvement in answer generation.'}
             </Paragraph>
             <Paragraph>
-              <strong>Performance:</strong> The system processes queries efficiently with an average response time of {metrics.responseTime}. 
-              Batch processing helps maintain consistent performance even with multiple concurrent queries.
+              <strong>Answer Matching:</strong> Out of {metrics.totalQueries} test queries, {metrics.matchedAnswers} answers were successfully matched with the context, while {metrics.unmatchedAnswers} queries did not find matching information.
+            </Paragraph>
+            <Paragraph>
+              <strong>Test Coverage:</strong> The test suite includes {metrics.totalQueries} queries covering various aspects of the system's functionality.
             </Paragraph>
           </Card>
         </>

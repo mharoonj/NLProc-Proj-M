@@ -5,16 +5,22 @@ from typing import List, Dict, Any, Optional
 import uuid
 
 class RAGLogger:
-    def __init__(self, log_dir: str = "logs"):
+    def __init__(self, log_dir: str = "logs", log_prefix: str = ""):
         """
         Initialize the RAG Logger.
         
         Args:
             log_dir (str): Directory to store log files
+            log_prefix (str): Prefix for log files
         """
         self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(exist_ok=True)
-        self.log_file = self.log_dir / f"rag_logs_{datetime.now().strftime('%Y%m%d')}.jsonl"
+        self.log_prefix = log_prefix
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        
+    def _get_log_file(self):
+        """Get the current log file path with prefix"""
+        timestamp = datetime.now().strftime("%Y%m%d")
+        return self.log_dir / f"{self.log_prefix}rag_logs_{timestamp}.jsonl"
         
     def log_query(self, 
                  question: str,
@@ -47,7 +53,8 @@ class RAGLogger:
             "chunk_ids": chunk_ids
         }
         
-        with open(self.log_file, 'a') as f:
+        log_file = self._get_log_file()
+        with open(log_file, 'a', encoding='utf-8') as f:
             f.write(json.dumps(log_entry) + '\n')
             
     def get_recent_logs(self, n: int = 10) -> List[Dict[str, Any]]:
@@ -60,11 +67,11 @@ class RAGLogger:
         Returns:
             List[Dict[str, Any]]: List of recent log entries
         """
-        if not self.log_file.exists():
+        if not self._get_log_file().exists():
             return []
             
         logs = []
-        with open(self.log_file, 'r') as f:
+        with open(self._get_log_file(), 'r') as f:
             for line in f:
                 logs.append(json.loads(line))
                 
