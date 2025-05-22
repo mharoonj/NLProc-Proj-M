@@ -102,7 +102,6 @@ class Generator:
                 do_sample=True,   # Enable sampling
                 top_p=0.95,       # Broader nucleus sampling
                 top_k=50         # Larger top-k
-                
                 )
         
         # Decode and return the answer

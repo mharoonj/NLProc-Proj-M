@@ -80,3 +80,5 @@ Thumbs.db
 # Temp files
 *.tmp
 *.temp
+
+.frontend/pindi-frontend/node_modules
