@@ -1,0 +1,17 @@
+[
+    {
+        "question": "Who is Imran Khan?",
+        "expected_answer_contains": [ "Cricketer", "politician", "chairman", "pti"],
+        "description": "Basic biographical question"
+    },
+    {
+        "question": "Which sports Imran Khan played? ",
+        "expected_answer_contains": ["cricket"],
+        "description": "Specific sports career question"
+    },
+    {
+        "question": "What is Imran Khan's educational background?",
+        "expected_answer_contains": ["oxford", "keble"],
+        "description": "Education background question"
+    }
+] 
