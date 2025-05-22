@@ -5,6 +5,7 @@ import sys
 from typing import List, Dict, Any
 from datetime import datetime
 import uuid
+import argparse
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -13,6 +14,7 @@ sys.path.append(str(project_root))
 from baseline.generator.generator import Generator
 from baseline.retriever.retriever import Retriever
 from utils.logger import RAGLogger
+from baseline.pipeline import RAGPipeline
 
 @pytest.fixture
 def setup_test_env():
@@ -275,5 +277,65 @@ def main():
     print(f"Passed Tests: {passed_tests}")
     print(f"Pass Rate: {(passed_tests/total_tests)*100:.1f}%")
 
+def run_tests(test_case=None, verbose=False):
+    # Initialize pipeline
+    pipeline = RAGPipeline(
+        model_name="google/flan-t5-base",
+        retriever_model='all-MiniLM-L6-v2',
+        log_dir=str(project_root / "logs")
+    )
+    
+    # Initialize logger with test prefix
+    logger = RAGLogger(
+        log_dir=str(project_root / "logs"),
+        log_prefix="test_"  # Add test prefix to log files
+    )
+    
+    # Add data
+    data_dir = project_root / "data"
+    pipeline.add_documents(directory=str(data_dir))
+    
+    # Test questions
+    test_questions = [
+        "When did Imran Khan start his cricket career?",
+        "What was Imran Khan's role in Pakistan's cricket team?",
+        "When did Imran Khan win the Cricket World Cup?",
+        "What is Imran Khan's educational background?",
+        "When did Imran Khan become Prime Minister of Pakistan?"
+    ]
+    
+    if test_case:
+        test_questions = [test_case]
+    
+    # Process each question
+    for question in test_questions:
+        if verbose:
+            print(f"\nProcessing question: {question}")
+        
+        # Get answer
+        result = pipeline.query(question)
+        
+        # Log the query
+        logger.log_query(
+            question=question,
+            retrieved_chunks=result['retrieved_chunks'],
+            prompt=result['prompt'],
+            generated_answer=result['answer'],
+            retrieval_scores=result['retrieval_scores'],
+            group_id="Test Generator"
+        )
+        
+        if verbose:
+            print(f"Generated Answer: {result['answer']}")
+            print("\nRetrieved Chunks:")
+            for chunk, score in zip(result['retrieved_chunks'], result['retrieval_scores']):
+                print(f"\nScore: {score:.4f}")
+                print(f"Text: {chunk[:200]}...")
+
 if __name__ == "__main__":
-    main() 
+    parser = argparse.ArgumentParser(description='Run generator tests')
+    parser.add_argument('--test_case', type=str, help='Specific test case to run')
+    parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+    args = parser.parse_args()
+    
+    run_tests(args.test_case, args.verbose) 
